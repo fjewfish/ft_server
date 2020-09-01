@@ -1,32 +1,33 @@
 FROM debian:buster
 
-RUN apt-get -y update && apt-get -y upgrade 
-RUN apt-get -y install vim \
-    nginx default-mysql-server php7.3 php7.3-fpm \
-    wordpress php7.3-mysql php-json php-nbstring \
-    openssl
+MAINTAINER fjewfish <metenoeducation@yandex.ru>
 
-COPY ./srcs/start_services.sh ./srcs/init_database.sql /
-COPY ./srcs/default /etc/nginx/sites-available
-COPY ./srcs/ssl-params.conf ./srcs/self-signed.conf /etc/nginx/snippets/
+LABEL Description="web server with services: Wordpress, phpMyAdmin, and a SQL database" Version="1.0"
 
-COPY ./srcs/fjewfish.crt ./srcs/dhparam.pem /etc/ssl/certs/
-COPY ./stcs/fjewfish.key /etc/ssl/private/fjewfish.key
-COPY ./srcs/autoindex.sh /
+RUN apt-get -y update && apt-get -y upgrade
+RUN apt-get -y install vim
+RUN apt-get -y install nginx
+RUN apt-get -y install mariadb-server
+RUN apt-get -y nstall php-{fpm,mysql,mbstring,zip,gd,xml,pear,gettext,cgi}
+RUN apt-get -y nstall openssl
 
-ADD https://files.phpmyadmin.net/phpMyAdmin/5.0.2/phpMyAdmin-5.0.2-all-languages.tar.gz p_adm.tar.gz
+WORKDIR /var/www/fjewfish_server
 
-RUN tar xvzf p_adm.tar.gz && mv phpMyAdmin-5.0.2-all-languages /var/www/html/phpmyadmin
-RUN mb /usr/share/wordpress /var/www/html
+ADD https://files.phpmyadmin.net/phpMyAdmin/5.0.2/phpMyAdmin-5.0.2-all-languages.tar.gz phpMyAdmin.tar.gz
+RUN tar xvzf phpMyAdmin.tar.gz
+ADD https://wordpress.org/latest.tar.gz wordpress.tar.gz
+RUN tar xvzf wordpress.tar.gz
 
-COPY ./srcs/wp-congig/php /var/www/html/wordpress
-COPY ./strs/congig.inc.php /var/www/html/phpmyadmin/
+COPY ./srcs/wp-config.php .
+COPY ./srcs/phpmyadmin.inc.php .
+COPY ./srcs/fjewfish_site.sh .
+COPY ./srcs/info.php .
+COPY ./srcs/maria_config.sql .
+COPY ./srcs/nginx_on.conf .
+COPY ./srcs/nginx_off.conf .
 
-RUN chown -R www-data /var/www/html
+ENV INDEX 1
 
 EXPOSE 80 443
 
-RUN service mysql start && mysql < init_database.sql
-
-ENTRYPOINT bash start_services.sh
-
+ENTRYPOINT bash fjewfish_site.sh
